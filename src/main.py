@@ -33,8 +33,10 @@ async def record(output_file):
     listener = WebSocketListener(websocket_uri, on_message, on_connect)
     await listener.listen()
 
+    recorder.close()
+
 def parse(ffmpeg_path, input_file, output_file, fps, scale_factor=1):
-    initial_image = input_file.replace('.json', '_initial.png')
+    initial_image = input_file.replace('.db', '_initial.png')
     
     video_creator = TimelapseVideoCreator(ffmpeg_path, initial_image, input_file, output_file, fps, scale_factor)
     video_creator.create_video()

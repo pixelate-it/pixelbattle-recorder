@@ -1,40 +1,39 @@
-import json
-import time
 import requests
-import io
-from PIL import Image, ImageDraw
+import sqlite3
+import time
 
 class CanvasRecorder:
-    def __init__(self, initial_image_url, output_file):
+    def __init__(self, initial_image_url, db_file):
         self.initial_image_url = initial_image_url
-        self.output_file = output_file
-        self.changes = []
-        self.load_initial_image()
+        self.db_file = db_file
+        self.start_time = time.time()
+        self.conn = sqlite3.connect(self.db_file)
+        self.create_table()
+
+    def create_table(self):
+        with self.conn:
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS changes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp INTEGER NOT NULL,
+                    x INTEGER NOT NULL,
+                    y INTEGER NOT NULL,
+                    color TEXT NOT NULL
+                )
+            """)
 
     def load_initial_image(self):
         response = requests.get(self.initial_image_url)
-        self.canvas = Image.open(io.BytesIO(response.content))
-        self.draw = ImageDraw.Draw(self.canvas)
-        
-        initial_image_output = self.output_file.replace('.json', '_initial.png')
-        self.canvas.save(initial_image_output)
+        with open(self.db_file.replace('.db', '_initial.png'), 'wb') as f:
+            f.write(response.content)
 
     def record_change(self, change):
-        timestamp = time.time() * 1000
-        self.changes.append({ 'timestamp': timestamp, 'change': change })
-        self.apply_change(change)
-        self.save_changes()
+        timestamp = int((time.time() - self.start_time) * 1000)
+        with self.conn:
+            self.conn.execute("""
+                INSERT INTO changes (timestamp, x, y, color)
+                VALUES (?, ?, ?, ?)
+            """, (timestamp, change['x'], change['y'], change['color']))
 
-    def apply_change(self, change):
-        x, y = change['x'], change['y']
-        color = change['color']
-        self.draw.point((x, y), fill=color)
-
-    def save_changes(self):
-        with open(self.output_file, 'w') as file:
-            json.dump(self.changes, file, indent=2)
-
-    def get_current_frame(self):
-        buffer = io.BytesIO()
-        self.canvas.save(buffer, format='PNG')
-        return buffer.getvalue()
+    def close(self):
+        self.conn.close()
