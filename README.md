@@ -20,4 +20,3 @@ Utility for recording and playing back event chronologies
 `initial_image_url` - link to canvas (`/pixels.png`)  
 `websocket_uri` - link to websocket (`/pixels/socket`)  
 `ffmpeg_path` - path to ffmpeg (you can just use `ffmpeg` as the path in most cases)  
-`fps` - fps in which the timelapse will be output using the `parse` command  
